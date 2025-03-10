@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>My Appointments</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        .star {
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: gray;
+        }
+        .star.selected {
+            color: gold;
+        }
+    </style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<div th:replace="fragments/navbar :: navbar"></div>
+
+<div class="container" style="margin-top: 4rem">
+    <h2 class="mb-4">My Appointments</h2>
+
+    <table class="table table-striped">
+        <thead class="table-dark">
+        <tr>
+            <th>Doctor</th>
+            <th>Service</th>
+            <th>Date</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="appointment : ${appointments}">
+            <td th:text="${appointment.doctorName}"></td>
+            <td th:text="${appointment.serviceName}"></td>
+            <td th:text="${appointment.appointmentDateStr}"></td>
+            <td th:text="${appointment.status}"></td>
+            <td>
+                <!-- Chỉ hiển thị nút review nếu appointment hoàn thành & chưa review -->
+                <button th:if="${appointment.status == 'COMPLETED' and !appointment.hasReview}"
+                        class="btn btn-primary btn-sm"
+                        th:attr="onclick='openReviewModal(' + ${appointment.id} + ')'">
+                    Review
+                </button>
+                <!-- Hiển thị trạng thái nếu đã review -->
+                <span th:if="${appointment.hasReview}" class="text-success fw-bold">Reviewed</span>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Review Modal -->
+<div class="modal fade" id="reviewModal" tabindex="-1" aria-labelledby="reviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Submit Review</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="reviewAppointmentId">
+                <input type="hidden" id="reviewRating">  <!-- FIX: Thêm input ẩn để lưu rating -->
+
+                <label>Rating:</label>
+                <div id="starContainer">
+                    <span class="star" data-value="1">★</span>
+                    <span class="star" data-value="2">★</span>
+                    <span class="star" data-value="3">★</span>
+                    <span class="star" data-value="4">★</span>
+                    <span class="star" data-value="5">★</span>
+                </div>
+
+                <label class="mt-2">Comment:</label>
+                <textarea id="reviewComment" class="form-control" placeholder="Write your review..."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="submitReview()">Submit</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript -->
+<script th:inline="javascript">
+    let appointments = /*[[${appointments}]]*/ [];
+
+    function openReviewModal(appointmentId) {
+        document.getElementById("reviewAppointmentId").value = appointmentId;
+        let modal = new bootstrap.Modal(document.getElementById("reviewModal"));
+        modal.show();
+    }
+
+    document.querySelectorAll('.star').forEach(star => {
+        star.addEventListener('click', function () {
+            let value = this.getAttribute('data-value');
+
+            // Xóa tất cả class selected trước khi set
+            document.querySelectorAll('.star').forEach(s => s.classList.remove('selected'));
+
+            // Set class cho các sao đã chọn
+            for (let i = 0; i < value; i++) {
+                document.querySelectorAll('.star')[i].classList.add('selected');
+            }
+
+            // Gán giá trị vào input hidden
+            let ratingInput = document.getElementById("reviewRating");
+            if (ratingInput) {
+                ratingInput.value = value;
+            }
+        });
+    });
+
+    function submitReview() {
+        let appointmentId = document.getElementById("reviewAppointmentId").value;
+        let rate = parseInt(document.getElementById("reviewRating").value); // Lấy giá trị rating từ input ẩn
+        let comment = document.getElementById("reviewComment").value;
+
+        if (!rate) {
+            alert("Please select a rating before submitting.");
+            return;
+        }
+
+        fetch("/review/submit", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ appointmentId, rate, comment })
+        }).then(() => {
+            alert("Review submitted successfully!");
+            window.location.reload();
+        }).catch(err => alert("Failed to submit review"));
+    }
+</script>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>

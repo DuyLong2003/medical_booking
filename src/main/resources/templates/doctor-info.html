@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Doctor Info</title>
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body>
+
+<div class="container py-5">
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <!-- Ảnh bác sĩ -->
+            <img class="img-fluid rounded" th:src="${doctor.image != null} ? ${doctor.image} : 'https://suckhoe123.vn/uploads/suc-khoe/bac-si-gia-dinh.png'"
+                 alt="Doctor Image">
+        </div>
+        <div class="col-md-8">
+            <h1 th:text="'Dr. ' + ${doctor.fullName}">Dr. Name</h1>
+            <h4 class="text-muted" th:text="${doctor.specialty}">Specialty</h4>
+            <!-- Mô tả, qualification, experience, etc. -->
+            <p th:text="${doctor.description}">Some description about the doctor...</p>
+        </div>
+    </div>
+
+    <hr>
+
+    <!-- Danh sách Services của bác sĩ -->
+    <h2 class="mb-4">Services Provided</h2>
+    <div class="row">
+        <div class="col-md-4 mb-3" th:each="srv : ${doctor.services}">
+            <div class="card h-100">
+                <a th:href="@{'/service/' + ${srv.id}}">
+                <img class="card-img-top"
+                     src="https://img.freepik.com/free-photo/medical-banner-with-stethoscope_23-2149611199.jpg?semt=ais_hybrid"
+                     alt="Service Image">
+                </a>
+                <div class="card-body">
+                    <a th:href="@{'/service/' + ${srv.id}}" class="text-decoration-none">
+                    <h5 class="card-title" th:text="${srv.name}">Service Name</h5>
+                    </a>
+                    <p class="card-text">
+                        Price: $<span th:text="${srv.price}">50</span>
+                    </p>
+                    <p class="card-text" th:text="${srv.description}">Service description</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

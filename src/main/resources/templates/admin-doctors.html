@@ -1,0 +1,268 @@
+<!-- admin-users.html -->
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Quản lý Users</title>
+</head>
+<body>
+<th:block th:replace="layout/admin-layout :: layout">
+    <th:block th:fragment="pageContent">
+        <h2>Quản lý Users (Doctors)</h2>
+
+        <!-- Vùng chứa AG Grid -->
+        <div id="myGrid" style="height: 600px; width: 100%;" class="ag-theme-alpine"></div>
+        <!-- Modal Edit User -->
+        <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+
+                    <!-- Modal header -->
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editModalLabel">Edit Doctor</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+
+                    <!-- Modal body: các trường edit -->
+                    <div class="modal-body">
+                        <form id="editForm">
+                            <input type="hidden" id="editUserId"/>
+                            <div class="d-flex justify-content-center">
+                                <img class="avatar avatar-16 bg-light rounded-circle text-white p-1"
+                                     style="width:150px; height:150px; object-fit: cover;"
+                                     src=""
+                                     id="editUserPhoto" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Username</label>
+                                <input type="text" class="form-control" id="editUsername"/>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Full Name</label>
+                                <input type="text" class="form-control" id="editFullName"/>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Phone</label>
+                                <input type="text" class="form-control" id="editPhone"/>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Email</label>
+                                <input type="text" class="form-control" id="editEmail"/>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Specialty</label>
+                                <input type="text" class="form-control" id="editSpecialty" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Qualification</label>
+                                <input type="text" class="form-control" id="editQualification" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Experience Years</label>
+                                <input type="number" class="form-control" id="editExperienceYears" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Consultation Fee</label>
+                                <input type="number" class="form-control" id="editConsultationFee" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Multiplier</label>
+                                <input type="number" class="form-control" id="editMultiplier" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Description</label>
+                                <textarea class="form-control" id="editDescription"></textarea>
+
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Image</label>
+                                <input type="file" class="form-control" id="editImage" accept="image/*"/>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Modal footer -->
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" onclick="saveUser()">Save changes</button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <script th:inline="javascript">
+            document.getElementById('editImage').addEventListener('change', function() {
+                let file = this.files[0];
+                if (!file) return;
+
+                let reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('editUserPhoto').src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+            function editUser(userId) {
+                // 1. Tìm row data tương ứng userId
+                //    Giả sử rowData đã có, ta duyệt rowData hoặc gọi gridOptions.api.getRowNode()...
+                let userData = gridOptions.rowData.find(u => u.id === userId);
+                if (!userData) {
+                    alert('Không tìm thấy user id=' + userId);
+                    return;
+                }
+
+                // 2. Đổ dữ liệu vào form
+                document.getElementById('editUserId').value = userData.id;
+                document.getElementById('editUsername').value = userData.username;
+                document.getElementById('editFullName').value = userData.fullName;
+                document.getElementById('editPhone').value = userData.phone;
+                document.getElementById('editEmail').value = userData.email;
+                document.getElementById('editSpecialty').value = userData.specialty;
+                document.getElementById('editQualification').value = userData.qualification;
+                document.getElementById('editExperienceYears').value = userData.experienceYears;
+                document.getElementById('editConsultationFee').value = userData.consultationFee;
+                document.getElementById('editMultiplier').value = userData.multiplier;
+                document.getElementById('editDescription').value = userData.description;
+                document.getElementById('editUserPhoto').src = userData.image || 'https://upload.wikimedia.org/wikipedia/commons/f/f8/Creative-Tail-People-doctor.svg';
+
+
+                // 3. Mở modal Bootstrap
+                let editModal = new bootstrap.Modal(document.getElementById('editModal'));
+                editModal.show();
+            }
+
+            function saveUser() {
+                let userId = document.getElementById('editUserId').value;
+                let username = document.getElementById('editUsername').value;
+                let fullName = document.getElementById('editFullName').value;
+                let phone = document.getElementById('editPhone').value;
+                let email = document.getElementById('editEmail').value;
+                let specialty = document.getElementById('editSpecialty').value;
+                let qualification = document.getElementById('editQualification').value;
+                let experienceYears = document.getElementById('editExperienceYears').value;
+                let consultationFee = document.getElementById('editConsultationFee').value;
+                let multiplier = document.getElementById('editMultiplier').value;
+                let description = document.getElementById('editDescription').value;
+
+                // Lấy file từ input type="file"
+                let imageFile = document.getElementById('editImage').files[0];
+
+                // Tạo FormData để gửi dạng multipart/form-data
+                let formData = new FormData();
+                formData.append('id', userId);
+                formData.append('username', username);
+                formData.append('fullName', fullName);
+                formData.append('phone', phone);
+                formData.append('email', email);
+                formData.append('specialty', specialty);
+                formData.append('qualification', qualification);
+                formData.append('experienceYears', experienceYears);
+                formData.append('consultationFee', consultationFee);
+                formData.append('multiplier', multiplier);
+                formData.append('description', description);
+
+                // Nếu có file ảnh, append vào
+                if (imageFile) {
+                    formData.append('imageFile', imageFile);
+                }
+
+                fetch('/api/admin/users/doctor/' + userId, {
+                    method: 'PUT',
+                    body: formData
+                    // KHÔNG set 'Content-Type': vì fetch sẽ tự thêm boundary cho multipart
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.json().then(errors => {
+                                // 'errors' lúc này là mảng message
+                                // ném exception kèm message, hoặc return
+                                console.log(errors);
+                                throw new Error(errors.join("\n"));
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        alert('Cập nhật thành công!');
+                        // Đóng modal + reload
+                        let editModalEl = document.getElementById('editModal');
+                        let editModal = bootstrap.Modal.getInstance(editModalEl);
+                        editModal.hide();
+                        window.location.reload();
+                    })
+                    .catch(error => alert(error.message));
+            }
+
+
+
+            function deleteUser(userId) {
+                if (!confirm('Bạn có chắc muốn xóa user ID = ' + userId + ' ?')) {
+                    return;
+                }
+                // Gọi API xóa user
+                fetch('/api/admin/users/' + userId, {
+                    method: 'DELETE'
+                })
+                    .then(response => {
+                        if (response.ok) {
+                            alert('Xóa thành công user ' + userId);
+                            // Reload trang (hoặc load lại dữ liệu grid)
+                            window.location.reload();
+                        } else {
+                            alert('Xóa thất bại!');
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+            }
+
+            /*<![CDATA[*/
+            let rowData = /*[[${customers}]]*/ []; // Lấy data từ model
+
+            const columnDefs = [
+                {headerName: "ID", field: "id", sortable: true, filter: true, width: 70},
+                {headerName: "Username", field: "username", sortable: true, filter: true},
+                {headerName: "Full Name", field: "fullName", sortable: true, filter: true},
+                {headerName: "Phone", field: "phone", sortable: true, filter: true},
+                {headerName: "Email", field: "email", sortable: true, filter: true},
+                {headerName: "Specialty", field: "specialty", sortable: true, filter: true},
+                {headerName: "Qualification", field: "qualification", sortable: true, filter: true},
+                {headerName: "Experience Years", field: "experienceYears", sortable: true, filter: true},
+                {headerName: "Consultation Fee", field: "consultationFee", sortable: true, filter: true},
+                {headerName: "Multiplier", field: "multiplier", sortable: true, filter: true},
+                {headerName: "Description", field: "description", sortable: true, filter: true},
+                {
+                    headerName: "Actions",
+                    field: "actions",
+                    cellRenderer: function (params) {
+                        return `
+      <button class="btn btn-sm btn-primary" onclick="editUser(${params.data.id})">
+        Sửa
+      </button>
+      <button class="btn btn-sm btn-danger ms-1" onclick="deleteUser(${params.data.id})">
+        Xoá
+      </button>
+    `;
+                    },
+                    width: 150
+                }
+            ];
+
+            const gridOptions = {
+                columnDefs: columnDefs,
+                rowData: rowData,
+                pagination: true,
+                paginationPageSize: 15,
+                defaultColDef: {resizable: true}
+            };
+
+            document.addEventListener('DOMContentLoaded', function () {
+                new agGrid.Grid(document.getElementById('myGrid'), gridOptions);
+            });
+            /*]]>*/
+        </script>
+    </th:block>
+</th:block>
+</body>
+</html>

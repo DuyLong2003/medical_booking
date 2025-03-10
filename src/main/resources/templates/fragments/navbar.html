@@ -1,0 +1,55 @@
+<!-- navbar.html -->
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Fragments</title>
+</head>
+
+<body>
+<!-- Định nghĩa fragment "navbar" -->
+<th:block th:fragment="navbar">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="/">Clinic</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#navbarSupportedContent">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="#services">Services</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#doctors">Doctors</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/appointment" th:if="${fullName != null}">Appointment</a></li>
+
+                    <!-- Hiển thị nếu user đã login (fullName != null) -->
+                    <li class="nav-item dropdown" th:if="${fullName != null}">
+                        <a class="nav-link dropdown-toggle" href="#" role="button"
+                           data-bs-toggle="dropdown" aria-expanded="false">
+                            <span th:text="${fullName}">FullName</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <a class="dropdown-item" href="/appointment-list">
+                                    My appointments
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="/logout">
+                                    Logout
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <!-- Hiển thị nếu user chưa login -->
+                    <li class="nav-item" th:if="${fullName == null}">
+                        <a class="nav-link" href="/auth/login">Login</a>
+                    </li>
+
+                </ul>
+            </div>
+        </div>
+    </nav>
+</th:block>
+</body>
+</html>

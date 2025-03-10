@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Manage Appointments</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@29.3.3/dist/ag-grid-community.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@29.3.3/dist/styles/ag-theme-alpine.css">
+</head>
+<body>
+
+<th:block th:replace="layout/admin-layout :: layout">
+    <th:block th:fragment="pageContent">
+        <div class="container mt-4">
+            <h2>Manage Appointments</h2>
+
+            <!-- AG Grid -->
+            <div id="myGrid" style="height: 600px; width: 100%;" class="ag-theme-alpine"></div>
+
+            <!-- Modal Update Appointment -->
+            <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <!-- Modal header -->
+                        <div class="modal-header">
+                            <h5 class="modal-title">Edit Appointment</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+
+                        <!-- Modal body -->
+                        <div class="modal-body">
+                            <form id="editForm">
+                                <input type="hidden" id="editAppointmentId"/>
+                                <div class="mb-3">
+                                    <label class="form-label">Doctor</label>
+                                    <input type="text" class="form-control" id="editDoctorName" disabled/>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Patient</label>
+                                    <input type="text" class="form-control" id="editPatientName" disabled/>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Service</label>
+                                    <input type="text" class="form-control" id="editServiceName" disabled/>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Appointment Date</label>
+                                    <input type="text" class="form-control" id="editAppointmentDate" disabled/>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Reason</label>
+                                    <textarea class="form-control" id="editReason" disabled></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Notes</label>
+                                    <textarea class="form-control" id="editNotes" disabled></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Medical Note</label>
+                                    <textarea class="form-control" id="editMedicalNote"></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Status</label>
+                                    <select class="form-select" id="editStatus">
+                                        <option value="CANCELLED">Cancelled</option>
+                                        <option value="COMPLETED" selected>Completed</option>
+                                    </select>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Modal footer -->
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="button" class="btn btn-primary" onclick="saveAppointment()">Save Changes</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <script th:inline="javascript">
+            let rowData = /*[[${appointments}]]*/ [];
+
+            const columnDefs = [
+                {headerName: "ID", field: "id", sortable: true, width: 70},
+                {headerName: "Doctor", field: "doctorName", sortable: true, filter: true},
+                {headerName: "Patient", field: "patientName", sortable: true, filter: true},
+                {headerName: "Service", field: "serviceName", sortable: true, filter: true},
+                {headerName: "Date", field: "appointmentDateStr", sortable: true, filter: true},
+                {headerName: "Medical note", field: "medicalNote", sortable: true, filter: true},
+                {
+                    headerName: "Status",
+                    field: "status",
+                    sortable: true,
+                    filter: true,
+                    cellStyle: params => {
+                        switch (params.value) {
+                            case "CONFIRMED": return { backgroundColor: "#007bff", color: "white", fontWeight: "bold" }; // Xanh dương
+                            case "CANCELLED": return { backgroundColor: "#dc3545", color: "white", fontWeight: "bold" }; // Đỏ
+                            case "COMPLETED": return { backgroundColor: "#28a745", color: "white", fontWeight: "bold" }; // Xanh lá
+                            default: return { backgroundColor: "#6c757d", color: "white", fontWeight: "bold" }; // Xám cho trạng thái khác
+                        }
+                    }
+                },
+                {
+                    headerName: "Actions",
+                    field: "actions",
+                    cellRenderer: function (params) {
+                        return `<button class="btn btn-sm btn-primary" onclick="editAppointment(${params.data.id})">Edit</button>`;
+                    },
+                    width: 100
+                }
+            ];
+
+            const gridOptions = {
+                columnDefs: columnDefs,
+                rowData: rowData,
+                pagination: true,
+                paginationPageSize: 15,
+                defaultColDef: {resizable: true}
+            };
+
+            document.addEventListener('DOMContentLoaded', function () {
+                new agGrid.Grid(document.getElementById('myGrid'), gridOptions);
+            });
+
+            function editAppointment(appointmentId) {
+                let appointment = rowData.find(a => a.id === appointmentId);
+                if (!appointment) return;
+                let isCompleted = appointment.status === "COMPLETED";
+                document.getElementById('editMedicalNote').disabled = isCompleted;
+                document.getElementById('editStatus').disabled = isCompleted;
+                document.getElementById('editAppointmentId').value = appointment.id;
+                document.getElementById('editDoctorName').value = appointment.doctorName;
+                document.getElementById('editPatientName').value = appointment.patientName;
+                document.getElementById('editServiceName').value = appointment.serviceName;
+                document.getElementById('editAppointmentDate').value = appointment.appointmentDateStr;
+                document.getElementById('editReason').value = appointment.reason;
+                document.getElementById('editNotes').value = appointment.notes;
+                document.getElementById('editMedicalNote').value = appointment.medicalNote || "";
+                document.getElementById('editStatus').value = appointment.status;
+
+                let editModal = new bootstrap.Modal(document.getElementById('editModal'));
+                editModal.show();
+            }
+
+            function saveAppointment() {
+                let appointmentId = document.getElementById('editAppointmentId').value;
+                let notes = document.getElementById('editNotes').value;
+                let medicalNote = document.getElementById('editMedicalNote').value;
+                let status = document.getElementById('editStatus').value;
+
+                fetch(`/api/admin/appointments/${appointmentId}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ notes, medicalNote, status }),
+                    status: status
+                })
+                    .then(response => response.json())
+                    .then(() => {
+                        alert("Updated successfully!");
+                        window.location.reload();
+                    })
+                    .catch(err => alert("Error updating: " + err.message));
+            }
+        </script>
+    </th:block>
+</th:block>
+
+</body>
+</html>

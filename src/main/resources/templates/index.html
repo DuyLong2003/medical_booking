@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Clinic - Services & Doctors</title>
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body>
+
+<!-- NAVBAR -->
+<div th:replace="fragments/navbar :: navbar"></div>
+
+<!-- BANNER -->
+<div class="bg-dark text-white text-center py-5">
+    <h1>Welcome to Our Clinic</h1>
+</div>
+
+<!-- SERVICES SECTION -->
+<section class="py-5" id="services">
+    <div class="container">
+        <h2 class="mb-4">Our Services</h2>
+        <div class="row" id="serviceList">
+            <!-- Cards sẽ được render bằng JS -->
+        </div>
+        <div class="text-center mt-3">
+            <button class="btn btn-primary" id="serviceLoadMoreBtn">Load More Services</button>
+        </div>
+    </div>
+</section>
+
+<!-- DOCTORS SECTION -->
+<section class="py-5 bg-light" id="doctors">
+    <div class="container">
+        <h2 class="mb-4">Our Doctors</h2>
+        <div class="row" id="doctorList">
+            <!-- Cards sẽ được render bằng JS -->
+        </div>
+        <div class="text-center mt-3">
+            <button class="btn btn-primary" id="doctorLoadMoreBtn">Load More Doctors</button>
+        </div>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<div th:replace="fragments/footer :: footer"></div>
+
+<!-- Truyền mảng services, doctors sang JS -->
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    let services = /*[[${services}]]*/ []; // Mảng ServiceDTO
+    let doctors = /*[[${doctors}]]*/ [];   // Mảng UserDoctorDTO
+    /*]]>*/
+</script>
+
+<script>
+    // Mặc định hiển thị 8, mỗi lần Load More hiển thị thêm 4
+    let serviceVisibleCount = 8;
+    let doctorVisibleCount = 8;
+    const STEP = 4;
+
+    //=== RENDER SERVICES ===
+    function renderServices() {
+        const container = document.getElementById('serviceList');
+        container.innerHTML = '';
+
+        // Lặp qua services[0..serviceVisibleCount-1]
+        for (let i = 0; i < serviceVisibleCount && i < services.length; i++) {
+            const srv = services[i];
+
+            // Tạo col
+            const colDiv = document.createElement('div');
+            colDiv.className = 'col-md-3 mb-4';
+
+            // Tạo card
+            const cardDiv = document.createElement('div');
+            cardDiv.className = 'card h-100';
+
+            // Ảnh random
+            const img = document.createElement('img');
+            img.className = 'card-img-top';
+            img.src = 'https://img.freepik.com/free-photo/medical-banner-with-stethoscope_23-2149611199.jpg?semt=ais_hybrid';
+            img.alt = 'Service Image';
+
+            // Card body
+            const cardBody = document.createElement('div');
+            cardBody.className = 'card-body';
+
+            // Title
+            const h5 = document.createElement('h5');
+            h5.className = 'card-title';
+            h5.textContent = srv.name;
+
+            // Price
+            const pPrice = document.createElement('p');
+            pPrice.className = 'card-text';
+            pPrice.textContent = `Price: $${srv.price}`;
+
+            // Desc
+            const pDesc = document.createElement('p');
+            pDesc.className = 'card-text';
+            pDesc.textContent = srv.description;
+
+            const aLink = document.createElement('a');
+            aLink.className = 'btn btn-primary mt-2';
+            aLink.href = '/service/' + srv.id;  // Link sang trang chi tiết
+            aLink.textContent = 'View More';
+
+            cardBody.appendChild(h5);
+            cardBody.appendChild(pPrice);
+            cardBody.appendChild(pDesc);
+            cardBody.appendChild(aLink);
+
+            cardDiv.appendChild(img);
+            cardDiv.appendChild(cardBody);
+            colDiv.appendChild(cardDiv);
+            container.appendChild(colDiv);
+        }
+    }
+
+    //=== RENDER DOCTORS ===
+    function renderDoctors() {
+        const container = document.getElementById('doctorList');
+        container.innerHTML = '';
+
+        for (let i = 0; i < doctorVisibleCount && i < doctors.length; i++) {
+            const doc = doctors[i];
+
+            // Cột bootstrap
+            const colDiv = document.createElement('div');
+            colDiv.className = 'col-md-3 mb-4';
+
+            // Card
+            const cardDiv = document.createElement('div');
+            cardDiv.className = 'card h-100';
+
+            // Ảnh
+            const img = document.createElement('img');
+            img.className = 'card-img-top';
+            img.src = doc.image ? doc.image : 'https://suckhoe123.vn/uploads/suc-khoe/bac-si-gia-dinh.png';
+            img.alt = 'Doctor Image';
+
+            // Card body
+            const cardBody = document.createElement('div');
+            cardBody.className = 'card-body';
+
+            // Tên bác sĩ
+            const h5 = document.createElement('h5');
+            h5.className = 'card-title';
+            h5.textContent = 'Dr. ' + doc.fullName;
+
+            // Chuyên khoa
+            const pSpec = document.createElement('p');
+            pSpec.className = 'card-text';
+            pSpec.textContent = doc.specialty;
+
+            // Nút hoặc link "View More" (đi đến /doctor/{id})
+            const aLink = document.createElement('a');
+            aLink.className = 'btn btn-primary mt-2';
+            aLink.href = '/doctor/' + doc.doctorId;  // Link sang trang chi tiết
+            aLink.textContent = 'View More';
+
+            // Gắn child vào card body
+            cardBody.appendChild(h5);
+            cardBody.appendChild(pSpec);
+            cardBody.appendChild(aLink);
+
+            // Gắn card body + img vào card
+            cardDiv.appendChild(img);
+            cardDiv.appendChild(cardBody);
+
+            // Gắn card vào cột
+            colDiv.appendChild(cardDiv);
+
+            // Gắn cột vào row
+            container.appendChild(colDiv);
+        }
+    }
+
+
+    //=== Xử lý Load More
+    function loadMoreServices() {
+        serviceVisibleCount += STEP;
+        if (serviceVisibleCount >= services.length) {
+            serviceVisibleCount = services.length;
+            document.getElementById('serviceLoadMoreBtn').style.display = 'none';
+        }
+        renderServices();
+    }
+    function loadMoreDoctors() {
+        doctorVisibleCount += STEP;
+        if (doctorVisibleCount >= doctors.length) {
+            doctorVisibleCount = doctors.length;
+            document.getElementById('doctorLoadMoreBtn').style.display = 'none';
+        }
+        renderDoctors();
+    }
+
+    //=== DOMContentLoaded
+    document.addEventListener('DOMContentLoaded', function() {
+        // Nếu services <= 8 => ẩn nút
+        if (services.length <= 8) {
+            serviceVisibleCount = services.length;
+            document.getElementById('serviceLoadMoreBtn').style.display = 'none';
+        }
+        renderServices();
+
+        // Nếu doctors <= 8 => ẩn nút
+        if (doctors.length <= 8) {
+            doctorVisibleCount = doctors.length;
+            document.getElementById('doctorLoadMoreBtn').style.display = 'none';
+        }
+        renderDoctors();
+
+        // Gắn event click
+        document.getElementById('serviceLoadMoreBtn').addEventListener('click', loadMoreServices);
+        document.getElementById('doctorLoadMoreBtn').addEventListener('click', loadMoreDoctors);
+    });
+</script>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

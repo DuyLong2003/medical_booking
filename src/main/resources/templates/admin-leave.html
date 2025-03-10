@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Leave Request</title>
+    <!-- AG Grid (nếu cần) -->
+    <script src="https://unpkg.com/ag-grid-community/dist/ag-grid-community.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/ag-grid-community/dist/styles/ag-grid.css">
+    <link rel="stylesheet" href="https://unpkg.com/ag-grid-community/dist/styles/ag-theme-alpine.css">
+
+    <!-- Bootstrap CSS (nếu dùng) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body>
+<th:block th:replace="layout/admin-layout :: layout">
+    <th:block th:fragment="pageContent">
+
+        <h2>Quản lý Leave (Đơn xin nghỉ)</h2>
+        <button class="btn btn-success mb-2" onclick="createLeave()">Thêm Leave</button>
+
+        <!-- Bảng hiển thị danh sách leave -->
+        <div id="myGrid" style="height: 500px;" class="ag-theme-alpine"></div>
+
+        <!-- Modal Add/Edit Leave -->
+        <div class="modal fade" id="leaveModal" tabindex="-1" aria-labelledby="leaveModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="leaveModalLabel">Tạo Leave Request</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+
+                    <div class="modal-body">
+                        <input type="hidden" id="leaveId" />
+
+                        <!-- Chọn Bác Sĩ -->
+                        <div class="mb-3">
+                            <label class="form-label">Doctor</label>
+                            <select class="form-select" id="doctorSelect">
+                                <!-- Sẽ render option bác sĩ ở JS -->
+                            </select>
+                        </div>
+
+                        <!-- Ngày bắt đầu -->
+                        <div class="mb-3">
+                            <label class="form-label">Start Time</label>
+                            <input type="datetime-local" class="form-control" id="startTime"/>
+                        </div>
+
+                        <!-- Ngày kết thúc -->
+                        <div class="mb-3">
+                            <label class="form-label">End Time</label>
+                            <input type="datetime-local" class="form-control" id="endTime"/>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" onclick="saveLeave()">Save</button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- SCRIPTS -->
+        <script th:inline="javascript">
+
+            // 1) rowData: danh sách leave ban đầu (server pass)
+            let rowData = /*[[${leaves}]]*/ []; // Mỗi leave { id, doctorId, doctorName, startTime, endTime }
+
+            // 2) columnDefs
+            const columnDefs = [
+                { headerName: "ID", field: "id", width: 70 },
+                { headerName: "Doctor", field: "doctorName", sortable: true, filter: true },
+                { headerName: "Start Time", field: "startTime", sortable: true, filter: true, cellRenderer: function(params) {
+                        if (!params.value) return '';
+                        // Parse sang Date object
+                        let d = new Date(params.value);
+                        // format
+                        return d.toLocaleString('vi-VN', {
+                            year: 'numeric', month: '2-digit', day: '2-digit',
+                            hour: '2-digit', minute: '2-digit'
+                        });
+                    } },
+                { headerName: "End Time", field: "endTime", sortable: true, filter: true, cellRenderer: function(params) {
+                        if (!params.value) return '';
+                        // Parse sang Date object
+                        let d = new Date(params.value);
+                        // format
+                        return d.toLocaleString('vi-VN', {
+                            year: 'numeric', month: '2-digit', day: '2-digit',
+                            hour: '2-digit', minute: '2-digit'
+                        });
+                    }},
+                {
+                    headerName: "Actions",
+                    field: "actions",
+                    width: 500,
+                    cellRenderer: function(params) {
+                        // Tùy ý: Edit, Delete...
+                        return `
+                            <button class="btn btn-sm btn-danger" onclick="deleteLeave(${params.data.id})">Delete</button>
+                        `;
+                    },}
+            ];
+
+            const gridOptions = {
+                columnDefs: columnDefs,
+                rowData: rowData,
+                pagination: true,
+                paginationPageSize: 10,
+                defaultColDef: { resizable: true }
+            };
+
+            document.addEventListener('DOMContentLoaded', function() {
+                new agGrid.Grid(document.getElementById('myGrid'), gridOptions);
+            });
+
+            // 3) Nút "Thêm Leave" -> Mở modal
+            function createLeave() {
+                document.getElementById('leaveId').value = '';
+                document.getElementById('doctorSelect').value = '';
+                document.getElementById('startTime').value = '';
+                document.getElementById('endTime').value = '';
+
+                // Lấy danh sách doctor => render select
+                fetch('/api/admin/doctors')
+                    .then(res => res.json())
+                    .then(doctors => {
+                        let select = document.getElementById('doctorSelect');
+                        select.innerHTML = '<option value="">--Chọn Bác Sĩ--</option>';
+                        doctors.forEach(doc => {
+                            let opt = document.createElement('option');
+                            opt.value = doc.id; // doctorId
+                            opt.text = doc.fullName + ' (' + doc.specialty + ')';
+                            select.appendChild(opt);
+                        });
+
+                        let modal = new bootstrap.Modal(document.getElementById('leaveModal'));
+                        modal.show();
+                    })
+                    .catch(err => alert(err.message));
+            }
+
+            // 4) Save => Gửi request (POST) tạo leave
+            function saveLeave() {
+                let leaveId = document.getElementById('leaveId').value; // if update, optional
+                let doctorId = document.getElementById('doctorSelect').value;
+                let startTime = document.getElementById('startTime').value; // '2025-02-20T08:00'
+                let endTime = document.getElementById('endTime').value;
+
+                // Tạo object
+                let leaveObj = {
+                    doctorId: parseInt(doctorId),
+                    startTime: startTime,
+                    endTime: endTime
+                };
+
+                fetch('/admin/leaves', { // HOẶC /api/admin/leaves
+                    method: 'POST', // or PUT if update
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(leaveObj)
+                })
+                    .then(res => {
+                        if (!res.ok) throw new Error("Tạo leave thất bại!");
+                        return res.json();
+                    })
+                    .then(data => {
+                        alert("Tạo leave thành công!");
+                        // Đóng modal + reload
+                        let modalEl = document.getElementById('leaveModal');
+                        let modal = bootstrap.Modal.getInstance(modalEl);
+                        modal.hide();
+                        window.location.reload();
+                    })
+                    .catch(err => alert(err.message));
+            }
+
+            // 5) Delete
+            function deleteLeave(leaveId) {
+                if (!confirm("Xoá leave id=" + leaveId + "?")) return;
+                fetch('/admin/leaves/' + leaveId, { method: 'DELETE' })
+                    .then(res => {
+                        if (!res.ok) throw new Error("Xoá thất bại!");
+                        alert("Xoá thành công!");
+                        window.location.reload();
+                    })
+                    .catch(err => alert(err.message));
+            }
+
+        </script>
+        <!-- Bootstrap JS -->
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    </th:block>
+</th:block>
+</body>
+</html>

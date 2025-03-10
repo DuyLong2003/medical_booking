@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Service Info</title>
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body>
+
+<!-- NAVBAR -->
+<div th:replace="fragments/navbar :: navbar"></div>
+
+<!-- Service Details -->
+<div class="container py-5" style="margin-top: 4rem">
+    <div class="row">
+        <div class="col-md-4">
+            <!-- Ảnh service (random) -->
+            <img class="img-fluid rounded" src="https://img.freepik.com/free-photo/medical-banner-with-stethoscope_23-2149611199.jpg?semt=ais_hybrid"
+                 alt="Service Image">
+        </div>
+        <div class="col-md-8">
+            <h1 th:text="${service.name}">Service Name</h1>
+            <h4 class="text-muted">Price: $<span th:text="${service.price}">50</span></h4>
+            <p th:text="${service.description}">Service description...</p>
+        </div>
+    </div>
+
+    <hr>
+
+    <!-- Doctors providing this service -->
+    <h2 class="mt-4">Available Doctors</h2>
+    <div class="row">
+        <div class="col-md-4 mb-3" th:each="doc : ${doctors}">
+            <div class="card h-100">
+                <a th:href="@{'/doctor/' + ${doc.id}}">
+                    <img class="card-img-top"
+                         th:src="${doc.image != null} ? ${doc.image} : 'https://suckhoe123.vn/uploads/suc-khoe/bac-si-gia-dinh.png'"
+                         alt="Doctor Image">
+                </a>
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <a th:href="@{'/doctor/' + ${doc.id}}" class="text-decoration-none">
+                            Dr. <span th:text="${doc.fullName}">Doctor Name</span>
+                        </a>
+                    </h5>
+                    <p class="card-text" th:text="${doc.specialty}">Specialty</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

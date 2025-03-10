@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Appointment</title>
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body>
+<div th:replace="fragments/navbar :: navbar"></div>
+<div class="container" style="margin-top: 4rem">
+    <h2>Book an Appointment</h2>
+
+    <!-- Khu vực thêm lịch -->
+    <div id="appointmentForms"></div>
+    <!-- Nhập thông tin người dùng -->
+    <div id="userInfoForm" class="border p-3 mb-3">
+        <h5>Your Information</h5>
+        <div class="mb-3">
+            <label class="form-label">Full Name</label>
+            <input type="text" class="form-control" id="editFullName"/>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Gender</label>
+            <select class="form-select" id="editGender">
+                <option value="">-- Chọn giới tính --</option>
+                <option value="1">Nam</option>
+                <option value="2">Nữ</option>
+                <option value="3">Khác</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Birthday</label>
+            <input type="date" class="form-control" id="editBirthday"/>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Phone</label>
+            <input type="text" class="form-control" id="editPhone"/>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Email</label>
+            <input type="text" class="form-control" id="editEmail"/>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Address</label>
+            <input type="text" class="form-control" id="editAddress"/>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Height(cm)</label>
+            <input type="number" step="0.01" class="form-control" id="editHeight"/>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Weight(kg)</label>
+            <input type="number" step="0.01" class="form-control" id="editWeight"/>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Medical History</label>
+            <textarea class="form-control" id="editMedicalHistory"></textarea>
+        </div>
+    </div>
+    <!-- Nút thêm lịch mới -->
+    <button class="btn btn-success mt-3" onclick="addAppointmentForm()">+ Add Appointment</button>
+
+    <!-- Button Đặt Lịch -->
+    <button class="btn btn-primary mt-3" onclick="bookAppointments()">Book Now</button>
+</div>
+
+<script>
+    let appointmentIndex = 0;
+    let servicesData = [];
+
+    document.addEventListener("DOMContentLoaded", function () {
+        fetch("/appointment/services")
+            .then(res => res.json())
+            .then(data => {
+                servicesData = data;
+                addAppointmentForm(); // Tạo form đầu tiên
+            });
+        fetch("/user/profile")
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById("editFullName").value = data.fullName || "";
+                document.getElementById("editGender").value = data.gender || "";
+                document.getElementById("editBirthday").value = data.birthday || "";
+                document.getElementById("editPhone").value = data.phone || "";
+                document.getElementById("editEmail").value = data.email || "";
+                document.getElementById("editAddress").value = data.address || "";
+                document.getElementById("editHeight").value = data.height || "";
+                document.getElementById("editWeight").value = data.weight || "";
+                document.getElementById("editMedicalHistory").value = data.medicalHistory || "";
+            });
+    });
+
+    function addAppointmentForm() {
+        const index = appointmentIndex++;
+        let today = new Date().toISOString().split("T")[0]; // Lấy ngày hôm nay
+
+        let formHtml = `
+            <div class="appointment-form border p-3 mb-3" id="appointmentForm-${index}">
+                <h5>Appointment #${index + 1}</h5>
+
+                <!-- Chọn Service -->
+                <label>Select Service</label>
+                <div id="serviceContainer-${index}" class="d-flex flex-wrap gap-2"></div>
+
+                <!-- Chọn Doctor -->
+                <label>Select Doctor</label>
+                <div id="doctorContainer-${index}" class="d-flex flex-wrap gap-2"></div>
+
+                <!-- Chọn Ngày -->
+                <label>Select Date</label>
+                <input type="date" id="dateSelect-${index}" class="form-control" min="${today}" value="${today}" onchange="updateTimeSlots(${index})" />
+
+                <!-- Chọn Time Slot -->
+                <label>Select Available Time</label>
+                <div id="timeSlotContainer-${index}" class="mt-2 d-flex flex-wrap"></div>
+
+                <!-- Lý do đặt lịch -->
+                <label>Reason for Appointment</label>
+                <input type="text" id="reasonInput-${index}" class="form-control" placeholder="Enter reason" />
+
+                <!-- Ghi chú thêm -->
+                <label>Additional Notes</label>
+                <textarea id="notesInput-${index}" class="form-control" placeholder="Enter additional notes"></textarea>
+
+                <!-- Nút xóa -->
+                <button class="btn btn-danger mt-2" onclick="removeAppointmentForm(${index})">Remove</button>
+            </div>
+        `;
+
+        document.getElementById("appointmentForms").insertAdjacentHTML('beforeend', formHtml);
+        renderServices(index);
+    }
+
+    function removeAppointmentForm(index) {
+        document.getElementById(`appointmentForm-${index}`).remove();
+    }
+
+    function renderServices(index) {
+        let container = document.getElementById(`serviceContainer-${index}`);
+        container.innerHTML = "";
+        servicesData.forEach(service => {
+            let btn = document.createElement("button");
+            btn.className = "btn btn-outline-primary m-1 service-btn";
+            btn.textContent = service.name;
+            btn.setAttribute("data-id", service.id);
+
+            btn.onclick = function () {
+                document.querySelectorAll(`#serviceContainer-${index} .service-btn`).forEach(b => {
+                    b.classList.remove("active");
+                    b.style.backgroundColor = "";
+                    b.style.color = "";
+                });
+
+                btn.classList.add("active");
+                btn.style.backgroundColor = "#007bff";
+                btn.style.color = "white";
+                loadDoctors(index, service.id);
+            };
+
+            container.appendChild(btn);
+        });
+    }
+
+    function loadDoctors(index, serviceId) {
+        fetch(`/appointment/doctors/${serviceId}`)
+            .then(res => res.json())
+            .then(doctors => {
+                let container = document.getElementById(`doctorContainer-${index}`);
+                container.innerHTML = "";
+
+                doctors.forEach(doc => {
+                    let btn = document.createElement("button");
+                    btn.className = "btn btn-outline-success m-1 doctor-btn";
+                    btn.textContent = doc.fullName;
+                    btn.setAttribute("data-id", doc.id);
+
+                    btn.onclick = function () {
+                        document.querySelectorAll(`#doctorContainer-${index} .doctor-btn`).forEach(b => {
+                            b.classList.remove("active");
+                            b.style.backgroundColor = "";
+                            b.style.color = "";
+                        });
+
+                        btn.classList.add("active");
+                        btn.style.backgroundColor = "#28a745";
+                        btn.style.color = "white";
+                        loadAvailableTimeSlots(index, doc.id);
+                    };
+
+                    container.appendChild(btn);
+                });
+            });
+    }
+
+    function loadAvailableTimeSlots(index, doctorId) {
+        let selectedDate = document.getElementById(`dateSelect-${index}`).value;
+        if (!doctorId || !selectedDate) return;
+
+        fetch(`/appointment/timeslots/${doctorId}/${selectedDate}`)
+            .then(res => res.json())
+            .then(timeSlots => {
+                let container = document.getElementById(`timeSlotContainer-${index}`);
+                container.innerHTML = "";
+
+                if (timeSlots.length === 0) {
+                    container.innerHTML = '<p class="text-danger">No available time slots</p>';
+                    return;
+                }
+
+                timeSlots.forEach(slot => {
+                    let btn = document.createElement("button");
+                    btn.className = "btn btn-outline-warning m-1 time-slot";
+                    btn.textContent = slot;
+                    btn.setAttribute("data-time", slot);
+
+                    btn.onclick = function () {
+                        document.querySelectorAll(`#timeSlotContainer-${index} .time-slot`).forEach(b => {
+                            b.classList.remove("active");
+                            b.style.backgroundColor = "";
+                            b.style.color = "";
+                        });
+
+                        btn.classList.add("active");
+                        btn.style.backgroundColor = "#ffc107";
+                        btn.style.color = "black";
+                    };
+
+                    container.appendChild(btn);
+                });
+            });
+    }
+
+    function bookAppointments() {
+        let appointments = [];
+        let userInfo = {
+            fullName: document.getElementById("editFullName").value.trim(),
+            gender: document.getElementById("editGender").value,
+            birthday: document.getElementById("editBirthday").value,
+            phone: document.getElementById("editPhone").value.trim(),
+            email: document.getElementById("editEmail").value.trim(),
+            address: document.getElementById("editAddress").value.trim(),
+            height: document.getElementById("editHeight").value,
+            weight: document.getElementById("editWeight").value,
+            medicalHistory: document.getElementById("editMedicalHistory").value.trim(),
+        };
+        if (!userInfo.fullName || !userInfo.phone || !userInfo.email) {
+            alert("Please complete your personal details before booking.");
+            return;
+        }
+        document.querySelectorAll(".appointment-form").forEach((form, index) => {
+            let serviceBtn = form.querySelector(".service-btn.active");
+            let doctorBtn = form.querySelector(".doctor-btn.active");
+            let dateInput = form.querySelector("input[type='date']");
+            let timeSlotBtn = form.querySelector(".time-slot.active");
+            let reasonInput = form.querySelector(`#reasonInput-${index}`);
+            let notesInput = form.querySelector(`#notesInput-${index}`);
+
+
+            if (!serviceBtn || !doctorBtn || !dateInput || !timeSlotBtn) {
+                alert(`Please complete all fields for Appointment #${index + 1}`);
+                return;
+            }
+
+            appointments.push({
+                doctorId: doctorBtn.getAttribute("data-id"),
+                appointmentDateStr: `${dateInput.value} ${timeSlotBtn.getAttribute("data-time")}`,
+                reason: reasonInput.value.trim(),
+                notes: notesInput.value.trim(),
+                serviceId: serviceBtn.getAttribute("data-id"),
+            });
+        });
+
+        if (appointments.length === 0) return;
+
+        fetch("/appointment/book-multiple", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userInfo, appointments })
+        }).then(() => {
+            alert("Appointments Booked!");
+            window.location.reload();
+        }).catch(err => alert(err.message));
+    }
+
+    function updateTimeSlots(index) {
+        let doctorBtn = document.querySelector(`#doctorContainer-${index} .doctor-btn.active`);
+        let selectedDate = document.getElementById(`dateSelect-${index}`).value;
+
+        if (!doctorBtn) return; // Nếu chưa chọn bác sĩ thì không gọi API
+
+        let doctorId = doctorBtn.getAttribute("data-id");
+        loadAvailableTimeSlots(index, doctorId, selectedDate); // Gọi API cập nhật lại khung giờ
+    }
+</script>
+</body>
+</html>

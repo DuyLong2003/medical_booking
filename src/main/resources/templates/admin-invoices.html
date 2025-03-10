@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Manage Invoices</title>
+    <script src="https://unpkg.com/ag-grid-community/dist/ag-grid-community.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/ag-grid-community/dist/styles/ag-grid.css">
+    <link rel="stylesheet" href="https://unpkg.com/ag-grid-community/dist/styles/ag-theme-alpine.css">
+
+    <!-- Bootstrap CSS (nếu dùng) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    </head>
+<body>
+
+<!-- NAVBAR -->
+<th:block th:replace="layout/admin-layout :: layout">
+    <th:block th:fragment="pageContent">
+        <div class="container mt-5">
+            <h2 class="mb-4">Manage Invoices</h2>
+
+            <!-- AG Grid -->
+            <div id="invoiceGrid" class="ag-theme-alpine" style="height: 600px; width: 100%;"></div>
+        </div>
+    </th:block>
+</th:block>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    let invoiceData = /*[[${invoices}]]*/ [];
+    /*]]>*/
+
+    const columnDefs = [
+        { headerName: "Patient", field: "patientName", sortable: true, filter: true },
+        { headerName: "Date", field: "date", sortable: true, filter: true },
+        { headerName: "Services", field: "services", width: 500, sortable: true, filter: true, wrapText: true, autoHeight: true },
+        { headerName: "Total Amount", field: "totalAmount", sortable: true, filter: true, valueFormatter: params => `$${params.value}` },
+        {
+            headerName: "Actions", field: "hasInvoice",
+            cellRenderer: function(params) {
+                if (!params.value) {
+                    return `<button class="btn btn-primary btn-sm" onclick="generateInvoice('${params.data.patientId}', '${params.data.date}')">Generate Invoice</button>`;
+                }
+                return `<span class="text-success fw-bold">Invoice Created</span>`;
+            }
+        }
+    ];
+
+    const gridOptions = {
+        columnDefs: columnDefs,
+        rowData: invoiceData,
+        pagination: true,
+        paginationPageSize: 10,
+        domLayout: 'autoHeight',
+        defaultColDef: { resizable: true }
+    };
+
+    document.addEventListener('DOMContentLoaded', function() {
+        new agGrid.Grid(document.getElementById('invoiceGrid'), gridOptions);
+    });
+
+    function generateInvoice(patientId, date) {
+        fetch(`/admin/invoices/generate?patientId=${patientId}&date=${date}`, {
+            method: 'POST'
+        }).then(response => {
+            if (response.ok) {
+                alert("Invoice generated successfully!");
+                window.location.reload();
+            } else {
+                alert("Failed to generate invoice.");
+            }
+        });
+    }
+</script>
+
+</body>
+</html>

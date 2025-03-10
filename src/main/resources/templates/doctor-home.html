@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Home</title>
+</head>
+<body>
+
+<!-- Kế thừa toàn bộ layout -->
+<th:block th:replace="layout/doctor-layout :: layout">
+    <!-- Truyền nội dung trang con qua fragment `pageContent` -->
+    <th:block th:fragment="pageContent">
+        <h2>Doctor</h2>
+        <p>Welcome!</p>
+    </th:block>
+</th:block>
+
+</body>
+</html>

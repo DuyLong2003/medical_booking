@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Home</title>
+</head>
+<body>
+
+<!-- Kế thừa toàn bộ layout -->
+<th:block th:replace="layout/admin-layout :: layout">
+    <!-- Truyền nội dung trang con qua fragment `pageContent` -->
+    <th:block th:fragment="pageContent">
+        <h2>Trang quản trị</h2>
+        <p>Chào mừng bạn đến với trang quản trị.</p>
+    </th:block>
+</th:block>
+
+</body>
+</html>

@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Quản lý Services</title>
+    <!-- Include AG Grid CSS + JS -->
+    <script src="https://unpkg.com/ag-grid-community/dist/ag-grid-community.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/ag-grid-community/dist/styles/ag-grid.css">
+    <link rel="stylesheet" href="https://unpkg.com/ag-grid-community/dist/styles/ag-theme-alpine.css">
+</head>
+<body>
+<th:block th:replace="layout/admin-layout :: layout">
+    <th:block th:fragment="pageContent">
+
+        <h2>Quản lý Services</h2>
+        <button class="btn btn-success mb-2" onclick="createService()">Thêm Mới</button>
+
+        <div id="myGrid" style="height: 500px; width: 100%;" class="ag-theme-alpine"></div>
+        <div class="modal fade" id="manageDoctorsModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+
+                    <div class="modal-header">
+                        <h5 class="modal-title">Chọn Bác Sĩ</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+
+                    <div class="modal-body">
+                        <input type="hidden" id="mdServiceId" />
+                        <!-- Danh sách doctor (checkbox) -->
+                        <div id="doctorList"></div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" onclick="saveDoctorsForService()">Save</button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Add/Edit Service -->
+        <div class="modal fade" id="serviceModal" tabindex="-1" aria-labelledby="serviceModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="serviceModalLabel">Service</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+
+                    <div class="modal-body">
+                        <input type="hidden" id="serviceId" />
+
+                        <div class="mb-3">
+                            <label class="form-label">Name</label>
+                            <input type="text" class="form-control" id="serviceName"/>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Price</label>
+                            <input type="number" class="form-control" id="servicePrice"/>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <textarea class="form-control" id="serviceDescription"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" onclick="saveService()">Save</button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <script th:inline="javascript">
+            function manageDoctors(serviceId) {
+                document.getElementById('mdServiceId').value = serviceId;
+
+                // 1. Gọi API lấy danh sách TẤT CẢ bác sĩ
+                // 2. Gọi API lấy danh sách bác sĩ đã gán cho serviceId
+                // 3. Render checkbox => doctorList
+
+                Promise.all([
+                    fetch('/api/admin/doctors').then(res => res.json()),         // all doctors
+                    fetch(`/api/admin/services/${serviceId}/doctors`).then(res => res.json()) // assigned doctors
+                ])
+                    .then(([allDoctors, assignedDoctors]) => {
+                        // assignedDoctors = array of doctorId or doctor object
+                        let assignedIds = assignedDoctors.map(d => d.id); // or d.doctorId
+
+                        let html = '';
+                        allDoctors.forEach(doc => {
+                            let checked = assignedIds.includes(doc.id) ? 'checked' : '';
+                            html += `
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="chkDoc_${doc.id}" value="${doc.id}" ${checked}>
+                <label class="form-check-label" for="chkDoc_${doc.id}">
+                  ${doc.fullName} (${doc.specialty})
+                </label>
+              </div>
+            `;
+                        });
+                        document.getElementById('doctorList').innerHTML = html;
+
+                        let modal = new bootstrap.Modal(document.getElementById('manageDoctorsModal'));
+                        modal.show();
+                    })
+                    .catch(err => alert(err.message));
+            }
+            function saveDoctorsForService() {
+                let serviceId = document.getElementById('mdServiceId').value;
+                let checkboxes = document.querySelectorAll('#doctorList input[type="checkbox"]');
+                let selectedDoctorIds = [];
+                checkboxes.forEach(chk => {
+                    if (chk.checked) selectedDoctorIds.push(parseInt(chk.value));
+                });
+
+                // Gọi API PUT /services/{serviceId}/doctors
+                fetch(`/api/admin/services/${serviceId}/doctors`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(selectedDoctorIds) // list of doctorIds
+                })
+                    .then(res => {
+                        if (!res.ok) throw new Error("Cập nhật doctors thất bại!");
+                        return res.json();
+                    })
+                    .then(data => {
+                        alert("Cập nhật thành công!");
+                        let modalEl = document.getElementById('manageDoctorsModal');
+                        let modal = bootstrap.Modal.getInstance(modalEl);
+                        modal.hide();
+                        // reload or do something
+                    })
+                    .catch(err => alert(err.message));
+            }
+
+            let rowData = /*[[${services}]]*/ []; // Lấy data từ model
+            const columnDefs = [
+                {headerName: "ID", field: "id", width: 70},
+                {headerName: "Name", field: "name", sortable: true, filter: true, width: 250},
+                {headerName: "Price", field: "price", sortable: true, filter: true},
+                {headerName: "Description", field: "description", sortable: true, filter: true, width: 550},
+                {
+                    headerName: "Actions",
+                    field: "actions",
+                    cellRenderer: function(params) {
+                        return `
+                            <button class="btn btn-sm btn-primary" onclick="editService(${params.data.id})">Edit</button>
+                            <button class="btn btn-sm btn-danger ms-1" onclick="deleteService(${params.data.id})">Delete</button>
+                            <button class="btn btn-sm btn-warning ms-1" onclick="manageDoctors(${params.data.id})">Manage Doctors</button>
+                        `;
+                    },
+                    width: 300
+                }
+            ];
+
+            const gridOptions = {
+                columnDefs: columnDefs,
+                rowData: rowData,
+                pagination: true,
+                paginationPageSize: 10,
+                defaultColDef: {resizable: true}
+            };
+
+            document.addEventListener('DOMContentLoaded', function() {
+                new agGrid.Grid(document.getElementById('myGrid'), gridOptions);
+            });
+
+            function createService() {
+                document.getElementById('serviceId').value = '';
+                document.getElementById('serviceName').value = '';
+                document.getElementById('servicePrice').value = '';
+                document.getElementById('serviceDescription').value = '';
+                let modal = new bootstrap.Modal(document.getElementById('serviceModal'));
+                modal.show();
+            }
+
+            function editService(id) {
+                let serviceData = rowData.find(s => s.id === id);
+                if (!serviceData) {
+                    alert("Service not found, id=" + id);
+                    return;
+                }
+                document.getElementById('serviceId').value = serviceData.id;
+                document.getElementById('serviceName').value = serviceData.name;
+                document.getElementById('servicePrice').value = serviceData.price;
+                document.getElementById('serviceDescription').value = serviceData.description;
+
+                let modal = new bootstrap.Modal(document.getElementById('serviceModal'));
+                modal.show();
+            }
+
+            function saveService() {
+                let id = document.getElementById('serviceId').value;
+                let name = document.getElementById('serviceName').value;
+                let price = document.getElementById('servicePrice').value;
+                let description = document.getElementById('serviceDescription').value;
+
+                let serviceObj = { name, price, description };
+                let url = '/admin/services';
+                let method = 'POST';
+                if (id) {
+                    // update
+                    url = '/admin/services/' + id;
+                    method = 'PUT';
+                    serviceObj.id = id;
+                }
+
+                fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(serviceObj)
+                })
+                    .then(response => {
+                        if (!response.ok) throw new Error("Save service failed!");
+                        return response.json();
+                    })
+                    .then(data => {
+                        alert("Service saved!");
+                        // Reload page or reload data
+                        window.location.reload();
+                    })
+                    .catch(err => alert(err.message));
+            }
+
+            function deleteService(id) {
+                if (!confirm("Delete service id=" + id + "?")) return;
+                fetch('/admin/services/' + id, {
+                    method: 'DELETE'
+                })
+                    .then(response => {
+                        if (!response.ok) throw new Error("Delete failed!");
+                        alert("Service deleted!");
+                        window.location.reload();
+                    })
+                    .catch(err => alert(err.message));
+            }
+        </script>
+    </th:block>
+</th:block>
+</body>
+</html>
